@@ -297,5 +297,18 @@ CREATE POLICY "Users read daily_stats" ON public.daily_stats
 
 DROP TYPE IF EXISTS public.member_role;
 
+-- Enable Supabase Realtime for the pageviews table so the live indicator works.
+-- This adds the table to the default supabase_realtime publication if it isn't already there.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'pageviews'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.pageviews;
+  END IF;
+END;
+$$;
+
 -- Done
 SELECT 'Crel schema repair complete' AS status;
