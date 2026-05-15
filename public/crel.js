@@ -32,6 +32,9 @@
       websiteId: script && script.getAttribute("data-website-id"),
       host: script && script.getAttribute("data-host"),
       autoTrack: script ? script.getAttribute("data-auto-track") !== "false" : true,
+      // Capture the script's own src so we can derive the host reliably —
+      // document.currentScript is null for dynamically injected scripts (e.g. Next.js afterInteractive).
+      src: (script && script.src) || "",
     };
   }
 
@@ -155,12 +158,12 @@
   var queue = [];
   var flushing = false;
   var sessionStart = Date.now();
+  // Derive the Crel server origin from the script tag's own src so this works
+  // for dynamically injected scripts (Next.js afterInteractive, etc.) where
+  // document.currentScript is null at evaluation time.
   var host = config.host || (function () {
-    var s = document.currentScript;
-    if (s && s.src) {
-      try {
-        return new URL(s.src).origin;
-      } catch (e) {}
+    if (config.src) {
+      try { return new URL(config.src).origin; } catch (e) {}
     }
     return "";
   })();

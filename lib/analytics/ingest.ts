@@ -27,7 +27,8 @@ export async function resolveWebsite(
 export async function upsertSession(
   supabase: SupabaseClient,
   websiteId: string,
-  payload: CollectPayload
+  payload: CollectPayload,
+  city?: string | null
 ) {
   const referrerDomain = parseReferrerDomain(payload.referrer);
 
@@ -36,6 +37,7 @@ export async function upsertSession(
     website_id: websiteId,
     visitor_id: payload.visitorId,
     country: payload.country ?? null,
+    city: city ?? null,
     device: (payload.device ?? "unknown") as DeviceType,
     browser: payload.browser ?? null,
     browser_version: payload.browserVersion ?? null,
@@ -63,11 +65,12 @@ export async function upsertSession(
 export async function recordPageview(
   supabase: SupabaseClient,
   websiteId: string,
-  payload: CollectPayload
+  payload: CollectPayload,
+  city?: string | null
 ) {
   const path = payload.path ?? "/";
 
-  await upsertSession(supabase, websiteId, payload);
+  await upsertSession(supabase, websiteId, payload, city);
 
   const { error: pvError } = await supabase.from("pageviews").insert({
     website_id: websiteId,

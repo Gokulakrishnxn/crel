@@ -10,6 +10,19 @@ import {
 import type { CollectPayload } from "@/lib/types";
 import { isLikelyBot, rateLimit } from "@/lib/security/rate-limit";
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+function corsJson(body: unknown, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: { ...CORS, ...(init?.headers ?? {}) },
+  });
+}
+
 const payloadSchema = z.object({
   type: z.enum(["pageview", "event", "heartbeat"]),
   websiteId: z.string().min(8),
@@ -45,97 +58,101 @@ const batchSchema = z.object({
   batch: z.array(payloadSchema).min(1).max(50),
 });
 
+function extractGeo(request: NextRequest) {
+  // Vercel sets these automatically on every request
+  return {
+    country:
+      request.headers.get("x-vercel-ip-country") ??
+      request.headers.get("cf-ipcountry") ??
+      null,
+    city:
+      request.headers.get("x-vercel-ip-city") ?? null,
+  };
+}
+
 export async function POST(request: NextRequest) {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const ua = request.headers.get("user-agent");
 
   if (isLikelyBot(ua)) {
-    return NextResponse.json({ ok: true, skipped: "bot" });
+    return corsJson({ ok: true, skipped: "bot" });
   }
 
   const limit = rateLimit(`collect:${ip}`, 120, 60_000);
   if (!limit.success) {
-    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+    return corsJson({ error: "Rate limit exceeded" }, { status: 429 });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return corsJson({ error: "Invalid JSON" }, { status: 400 });
   }
+
+  const geo = extractGeo(request);
 
   const parsed = batchSchema.safeParse(body);
   if (!parsed.success) {
     const single = payloadSchema.safeParse(body);
     if (!single.success) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+      return corsJson({ error: "Invalid payload" }, { status: 400 });
     }
-    return handlePayloads([single.data as CollectPayload]);
+    return handlePayloads([single.data as CollectPayload], geo);
   }
 
-  return handlePayloads(parsed.data.batch as CollectPayload[]);
+  return handlePayloads(parsed.data.batch as CollectPayload[], geo);
 }
 
-async function handlePayloads(payloads: CollectPayload[]) {
+async function handlePayloads(
+  payloads: CollectPayload[],
+  geo: { country: string | null; city: string | null }
+) {
   const supabase = createAdminClient();
   const trackingId = payloads[0]?.websiteId;
 
   if (!trackingId) {
-    return NextResponse.json({ error: "Missing website" }, { status: 400 });
+    return corsJson({ error: "Missing website" }, { status: 400 });
   }
 
   const website = await resolveWebsite(supabase, trackingId);
   if (!website) {
-    return NextResponse.json({ error: "Unknown website" }, { status: 404 });
+    return corsJson({ error: "Unknown website" }, { status: 404 });
   }
 
   try {
     for (const payload of payloads) {
       if (payload.websiteId !== trackingId) continue;
 
-      switch (payload.type) {
+      // Server-side geo enrichment: override whatever the client sent
+      const enriched: CollectPayload = {
+        ...payload,
+        country: geo.country ?? payload.country,
+      };
+
+      switch (enriched.type) {
         case "pageview":
-          await recordPageview(supabase, website.id, payload);
+          await recordPageview(supabase, website.id, enriched, geo.city);
           break;
         case "event":
-          await recordEvent(supabase, website.id, payload);
+          await recordEvent(supabase, website.id, enriched);
           break;
         case "heartbeat":
-          if (payload.duration !== undefined) {
-            await recordHeartbeat(
-              supabase,
-              payload.sessionId,
-              payload.duration
-            );
+          if (enriched.duration !== undefined) {
+            await recordHeartbeat(supabase, enriched.sessionId, enriched.duration);
           }
           break;
       }
     }
   } catch (err) {
     console.error("[collect]", err);
-    return NextResponse.json({ error: "Ingest failed" }, { status: 500 });
+    return corsJson({ error: "Ingest failed" }, { status: 500 });
   }
 
-  return NextResponse.json(
-    { ok: true },
-    {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-      },
-    }
-  );
+  return corsJson({ ok: true });
 }
 
 export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  });
+  return new NextResponse(null, { status: 204, headers: CORS });
 }
