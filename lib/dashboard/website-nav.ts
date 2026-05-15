@@ -4,6 +4,7 @@ import {
   Code2,
   FileText,
   Globe2,
+  KeyRound,
   Monitor,
   Settings,
   Share2,
@@ -27,6 +28,7 @@ export const websiteNavLinks = (websiteId: string): WebsiteNavItem[] => [
   { href: `/dashboard/${websiteId}/technology`, label: "Technology", icon: Monitor },
   { href: `/dashboard/${websiteId}/events`, label: "Events", icon: Sparkles },
   { href: `/dashboard/${websiteId}/tracking`, label: "Tracking", icon: Code2 },
+  { href: `/dashboard/${websiteId}/api-keys`, label: "API Keys", icon: KeyRound },
   { href: `/dashboard/${websiteId}/settings`, label: "Settings", icon: Settings },
 ];
 

@@ -30,6 +30,7 @@
     }
     return {
       websiteId: script && script.getAttribute("data-website-id"),
+      apiKey: script && script.getAttribute("data-api-key"),
       host: script && script.getAttribute("data-host"),
       autoTrack: script ? script.getAttribute("data-auto-track") !== "false" : true,
       // Capture the script's own src so we can derive the host reliably —
@@ -215,10 +216,15 @@
   }
 
   function flush() {
-    if (flushing || !queue.length || !config.websiteId) return;
+    if (flushing || !queue.length) return;
+    // Require either a tracking ID or an API key to send
+    if (!config.websiteId && !config.apiKey) return;
     flushing = true;
     var batch = queue.splice(0, queue.length);
-    sendWithRetry({ batch: batch }).finally(function () {
+    // Include API key in the batch wrapper (sendBeacon can't set custom headers)
+    var wrapper = { batch: batch };
+    if (config.apiKey) wrapper.apiKey = config.apiKey;
+    sendWithRetry(wrapper).finally(function () {
       flushing = false;
       if (queue.length) scheduleFlush();
     });
@@ -271,7 +277,8 @@
 
   global.crel = crel;
 
-  if (config.websiteId) {
+  // Start tracking when either data-website-id or data-api-key is present
+  if (config.websiteId || config.apiKey) {
     if (config.autoTrack) {
       pageview();
       initSpaTracking();

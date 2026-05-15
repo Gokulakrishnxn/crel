@@ -295,6 +295,31 @@ CREATE POLICY "Users read events" ON public.events
 CREATE POLICY "Users read daily_stats" ON public.daily_stats
   FOR SELECT USING (public.user_has_website_access(website_id));
 
+-- ---------------------------------------------------------------------------
+-- API Keys
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.api_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  website_id UUID NOT NULL REFERENCES public.websites(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  key_prefix TEXT NOT NULL,
+  key_hash TEXT NOT NULL UNIQUE,
+  last_used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  revoked_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON public.api_keys(key_hash) WHERE revoked_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_api_keys_website ON public.api_keys(website_id);
+
+ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users manage api_keys" ON public.api_keys;
+CREATE POLICY "Users manage api_keys" ON public.api_keys
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 DROP TYPE IF EXISTS public.member_role;
 
 -- Enable Supabase Realtime for the pageviews table so the live indicator works.

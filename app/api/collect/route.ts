@@ -7,6 +7,7 @@ import {
   recordPageview,
   resolveWebsite,
 } from "@/lib/analytics/ingest";
+import { isApiKey, resolveWebsiteFromApiKey } from "@/lib/api-keys";
 import type { CollectPayload } from "@/lib/types";
 import { isLikelyBot, rateLimit } from "@/lib/security/rate-limit";
 
@@ -25,7 +26,7 @@ function corsJson(body: unknown, init?: ResponseInit) {
 
 const payloadSchema = z.object({
   type: z.enum(["pageview", "event", "heartbeat"]),
-  websiteId: z.string().min(8),
+  websiteId: z.string().min(8).optional(), // optional when apiKey is used
   sessionId: z.string().uuid(),
   visitorId: z.string().min(8),
   url: z.string().optional(),
@@ -55,19 +56,35 @@ const payloadSchema = z.object({
 });
 
 const batchSchema = z.object({
+  apiKey: z.string().optional(), // API key in body for sendBeacon / crel.js
   batch: z.array(payloadSchema).min(1).max(50),
 });
 
 function extractGeo(request: NextRequest) {
-  // Vercel sets these automatically on every request
   return {
     country:
       request.headers.get("x-vercel-ip-country") ??
       request.headers.get("cf-ipcountry") ??
       null,
-    city:
-      request.headers.get("x-vercel-ip-city") ?? null,
+    city: request.headers.get("x-vercel-ip-city") ?? null,
   };
+}
+
+/** Extract API key from Authorization header or request body. */
+function extractApiKey(
+  request: NextRequest,
+  body: unknown
+): string | null {
+  const auth = request.headers.get("authorization") ?? "";
+  if (auth.startsWith("Bearer ")) {
+    const candidate = auth.slice("Bearer ".length).trim();
+    if (isApiKey(candidate)) return candidate;
+  }
+  if (body && typeof body === "object" && "apiKey" in body) {
+    const k = (body as Record<string, unknown>).apiKey;
+    if (typeof k === "string" && isApiKey(k)) return k;
+  }
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -92,6 +109,7 @@ export async function POST(request: NextRequest) {
   }
 
   const geo = extractGeo(request);
+  const apiKey = extractApiKey(request, body);
 
   const parsed = batchSchema.safeParse(body);
   if (!parsed.success) {
@@ -99,32 +117,37 @@ export async function POST(request: NextRequest) {
     if (!single.success) {
       return corsJson({ error: "Invalid payload" }, { status: 400 });
     }
-    return handlePayloads([single.data as CollectPayload], geo);
+    return handlePayloads([single.data as CollectPayload], geo, apiKey);
   }
 
-  return handlePayloads(parsed.data.batch as CollectPayload[], geo);
+  return handlePayloads(
+    parsed.data.batch as CollectPayload[],
+    geo,
+    apiKey ?? parsed.data.apiKey ?? null
+  );
 }
 
 async function handlePayloads(
   payloads: CollectPayload[],
-  geo: { country: string | null; city: string | null }
+  geo: { country: string | null; city: string | null },
+  apiKey: string | null
 ) {
   const supabase = createAdminClient();
-  const trackingId = payloads[0]?.websiteId;
 
-  if (!trackingId) {
-    return corsJson({ error: "Missing website" }, { status: 400 });
-  }
-
-  const website = await resolveWebsite(supabase, trackingId);
-  if (!website) {
-    return corsJson({ error: "Unknown website" }, { status: 404 });
+  // Resolve website — API key takes precedence over tracking_id in payload
+  let website: { id: string; domain: string } | null = null;
+  if (apiKey) {
+    website = await resolveWebsiteFromApiKey(supabase, apiKey);
+    if (!website) return corsJson({ error: "Invalid API key" }, { status: 401 });
+  } else {
+    const trackingId = payloads[0]?.websiteId;
+    if (!trackingId) return corsJson({ error: "Missing websiteId or API key" }, { status: 400 });
+    website = await resolveWebsite(supabase, trackingId);
+    if (!website) return corsJson({ error: "Unknown website" }, { status: 404 });
   }
 
   try {
     for (const payload of payloads) {
-      if (payload.websiteId !== trackingId) continue;
-
       // Server-side geo enrichment: override whatever the client sent
       const enriched: CollectPayload = {
         ...payload,
