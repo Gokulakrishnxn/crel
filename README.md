@@ -1,232 +1,199 @@
 # Crel — Open-source privacy-first analytics
 
-Crel is a **100% open-source** web analytics platform (Umami / Plausible inspired) built with **Next.js**, **shadcn/ui**, and **Supabase**. Deploy the dashboard on **Vercel** and store data in **Supabase Postgres** with Auth, RLS, and Realtime.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/Gokulakrishnxn/crel/actions/workflows/ci.yml/badge.svg)](https://github.com/Gokulakrishnxn/crel/actions/workflows/ci.yml)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-## Architecture
+Crel is a **lightweight, privacy-first web analytics platform** — self-hosted on your own Vercel + Supabase. No cookies. No third-party trackers. You own every byte.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for diagrams, tech decisions, and folder layout.
-
-| Component | Stack |
-|-----------|--------|
-| App | Next.js 16 App Router + TypeScript |
-| UI | shadcn/ui + Tailwind CSS v4 + dark/light mode |
-| Charts | Recharts |
-| DB / Auth / Realtime | Supabase |
-| Tracker | `public/crel.js` (vanilla JS, batched ingest) |
+> Inspired by [Umami](https://umami.is) and [Plausible](https://plausible.io), built on the modern Next.js App Router stack.
 
 ---
 
-## 1. Project setup
+## Features
 
-### Prerequisites
+- **< 6 KB tracking script** — vanilla JS, no dependencies, works on any site
+- **Real-time dashboard** — live pageview counter via Supabase Realtime
+- **Session explorer** — browse individual visits with country, device, source
+- **Geography map** — interactive world map with country breakdown
+- **Custom events** — `window.crel.track('signup', { plan: 'pro' })`
+- **UTM campaign tracking** — source / medium / campaign / term / content
+- **Dark mode** — full light/dark theme
+- **Public shared dashboards** — shareable read-only links per website
+- **Self-hostable** — deploy on Vercel in minutes, data stays in your Supabase
 
-- Node.js 20+
-- [Supabase](https://supabase.com) project
-- [Vercel](https://vercel.com) account (optional, for deploy)
+---
 
-### Commands
+## Tech stack
+
+| Layer | Choice |
+|-------|--------|
+| Framework | Next.js 16 App Router + TypeScript |
+| UI | shadcn/ui + Tailwind CSS v4 |
+| Charts | Recharts + react-svg-worldmap |
+| Database / Auth / Realtime | Supabase (Postgres + RLS) |
+| Tracker | `public/crel.js` — vanilla JS |
+| Deployment | Vercel (Edge Middleware) |
+
+---
+
+## Quick start
+
+### 1. Clone
 
 ```bash
-# Clone or use existing repo
+git clone https://github.com/Gokulakrishnxn/crel.git
 cd crel
-
-# If starting fresh:
-# npx create-next-app@latest crel --typescript --tailwind --eslint --app --src-dir=false
-# cd crel
-
 npm install
+```
 
-# Initialize shadcn/ui (already done in this repo)
-npx shadcn@latest init -d
-npx shadcn@latest add card table tabs dropdown-menu input label separator avatar select popover calendar badge skeleton sheet sidebar button
+### 2. Create a Supabase project
 
-# Environment
+1. Go to [supabase.com](https://supabase.com) → New project
+2. Copy your **Project URL**, **anon key**, and **service role key**
+3. In the SQL Editor, paste and run [`supabase/repair.sql`](supabase/repair.sql)
+4. Go to Authentication → Providers → enable **Email**
+5. Go to Database → Replication → enable `pageviews` table for Realtime
+
+### 3. Configure environment
+
+```bash
 cp .env.example .env.local
-# Fill in Supabase URL, anon key, service role key
+```
 
-# Apply database schema (Supabase SQL Editor or CLI)
-# Paste supabase/repair.sql (safe to re-run; fixes partial/duplicate errors)
+Edit `.env.local`:
 
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### 4. Run
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000), sign up, and add your first website.
 
 ---
 
-## 2. Supabase database schema
+## Deploy to Vercel
 
-Full SQL: [`supabase/migrations/001_initial_schema.sql`](supabase/migrations/001_initial_schema.sql)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Gokulakrishnxn/crel&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,NEXT_PUBLIC_APP_URL&envDescription=Supabase%20credentials%20and%20your%20app%20URL&project-name=crel&repository-name=crel)
 
-### Tables
+After deploying, set these environment variables in your Vercel project settings:
 
-| Table | Purpose |
-|-------|---------|
-| `profiles` | User profile (linked to `auth.users`) |
-| `websites` | Sites owned by `user_id`, with `tracking_id` for ingest |
-| `sessions` | Visitor sessions, UTM, device, bounce, duration |
-| `pageviews` | Per-path hits |
-| `events` | Custom events (partitioned by month) |
-| `daily_stats` | Optional rollups |
-
-### Indexes & partitioning
-
-- B-tree indexes on `(website_id, created_at)` for pageviews and sessions
-- `events` uses **RANGE partitioning** on `created_at` (extend monthly)
-- GIN index on `events.properties`
-
-### RLS
-
-- Dashboard reads gated by `user_has_website_access()`
-- Ingest uses **service role** in `/api/collect` only
-- Websites owned directly by the authenticated user (RLS on `user_id`)
-
-### Realtime
-
-In Supabase Dashboard → Database → Replication, enable **`pageviews`** for live dashboard updates.
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project API URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Secret** — never expose to browser |
+| `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
 
 ---
 
-## 3. Tracking SDK
+## Add tracking to your website
 
-File: [`public/crel.js`](public/crel.js)
-
-### Install snippet
+Paste this before `</head>` on any site:
 
 ```html
 <script
   async
-  src="https://YOUR_APP.vercel.app/crel.js"
+  src="https://your-app.vercel.app/crel.js"
   data-website-id="YOUR_TRACKING_ID"
 ></script>
 ```
 
-### API
+Your tracking ID is shown in the **Tracking** tab of each website in the dashboard.
+
+### Custom events
 
 ```javascript
-// Custom event
-window.crel.track("signup", { plan: "pro" });
-
-// Manual pageview (auto-tracked on load + SPA navigation)
-window.crel.pageview();
-
-// Flush queue immediately
-window.crel.flush();
+window.crel.track('signup', { plan: 'pro' });
+window.crel.track('purchase', { value: 49, currency: 'USD' });
 ```
-
-### Features
-
-- Auto pageviews + History API (SPA)
-- Session & visitor IDs (localStorage, 30m timeout)
-- UTM parsing, device/browser/OS detection
-- Batch flush every 3s + `sendBeacon` on unload
-- Exponential backoff retries (3×)
 
 ---
 
-## 4. Next.js project structure
+## Project structure
 
 ```
 app/
-  (marketing)/page.tsx          # Landing
-  (auth)/login|signup/
+  (marketing)/                # Public landing page
+  (auth)/                     # Login, signup, forgot / reset password
   (dashboard)/dashboard/
-    layout.tsx                  # Sidebar shell
-    page.tsx                    # Website list
-    [websiteId]/page.tsx        # Analytics dashboard
-    settings/page.tsx           # Add website
-  api/collect/route.ts          # Public ingest
-  api/analytics/[websiteId]/   # Authenticated JSON API
-components/
-  dashboard/                    # Charts, tables, sidebar, date picker
-  ui/                           # shadcn components
+    [websiteId]/              # Overview, Sessions, Pages, Sources,
+                              # Geography, Technology, Events, Tracking, Settings
+  api/collect/                # Public ingest (no auth required)
+  api/analytics/[websiteId]/  # Authenticated JSON API
+  share/[shareId]/            # Public read-only shared dashboard
+components/dashboard/         # Charts, tables, sidebar, session list
 lib/
-  analytics/queries.ts          # Dashboard aggregations
-  analytics/ingest.ts           # Write path for collect API
-  supabase/                     # Browser, server, admin clients
-  security/rate-limit.ts
-public/crel.js
-supabase/migrations/
+  analytics/                  # Supabase queries + ingest logic
+  geography/                  # Country labels + ISO map codes
+  dashboard/                  # Nav helpers, session formatters
+public/crel.js                # Tracking SDK (<6 KB)
+supabase/
+  repair.sql                  # Safe idempotent schema — run this
+  migrations/                 # Individual migration files
 ```
 
 ---
 
-## 5. Implementation roadmap
+## Database schema
 
-### Phase 1 — MVP (this repo)
+| Table | Purpose |
+|-------|---------|
+| `profiles` | User profile, linked to `auth.users` |
+| `websites` | Sites owned by a user, holds `tracking_id` |
+| `sessions` | Visitor sessions — UTM, device, bounce, duration |
+| `pageviews` | Per-path hits |
+| `events` | Custom events (partitioned monthly by `created_at`) |
+| `daily_stats` | Optional rollup table |
 
+Full schema: [`supabase/migrations/001_initial_schema.sql`](supabase/migrations/001_initial_schema.sql)
+
+---
+
+## Roadmap
+
+### Phase 1 — MVP ✅
 - [x] Tracking SDK + `/api/collect`
 - [x] Sessions, pageviews, custom events
-- [x] Dashboard: overview stats, time series, top pages/sources/geo/tech
-- [x] Auth + website creation
+- [x] Dashboard: overview, sessions, pages, sources, geography, technology, events
+- [x] Auth (email/password, forgot password, reset password)
 - [x] Date range filter
+- [x] Public shared dashboards
+- [x] Self-tracking support
 
 ### Phase 2 — Advanced analytics
-
-- [ ] `daily_stats` materialized refresh (pg_cron)
-- [ ] Custom event explorer + funnels
-- [ ] Segmentation (UTM, country, device filters)
 - [ ] Export CSV
+- [ ] Funnel analysis
+- [ ] Segmentation filters (UTM, country, device)
+- [ ] `daily_stats` rollup via pg_cron
 - [ ] Upstash Redis rate limiting (multi-region)
 
 ### Phase 3 — Collaboration & scale
-
 - [ ] Invite collaborators per website
-- [ ] Organization / team workspaces (optional)
-- [ ] Shareable public dashboards (`share_id`)
-- [ ] Automated event partition creation
-- [ ] GeoIP via open dataset (e.g. MaxMind GeoLite2 self-hosted)
+- [ ] GeoIP enrichment (MaxMind GeoLite2)
+- [ ] Automated monthly event partition creation
+- [ ] Organization / team workspaces
 
 ---
 
-## 6. Vercel + Supabase deployment
+## Contributing
 
-### Supabase
+Contributions are welcome and encouraged! Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
-1. Create project → copy **Project URL**, **anon key**, **service role key**
-2. Run migrations in SQL Editor
-3. Auth → enable Email provider
-4. Enable Realtime on `pageviews`
-5. (Optional) Set custom SMTP for auth emails
-
-### Vercel
-
-1. Import Git repo
-2. Set environment variables:
-
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase API URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Secret** — server only |
-| `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
-
-3. Deploy
-
-### One-click
-
-Add a Deploy button to your fork:
-
-```markdown
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=...)
-```
-
----
-
-## 7. Security & best practices
-
-| Topic | Implementation |
-|-------|----------------|
-| Rate limiting | 120 req/min/IP on `/api/collect` (swap to Upstash for production) |
-| Bot filtering | User-agent heuristics; skip recording |
-| API auth | Dashboard uses Supabase session; ingest uses tracking ID + service role |
-| RLS | Analytics read-protected by website ownership (`user_id`) |
-| Secrets | Never expose `SUPABASE_SERVICE_ROLE_KEY` to the client |
-| CORS | Collect endpoint allows `*` — restrict via `websites.settings.allowedOrigins` in Phase 2 |
-| Domain validation | Validate `Origin` / `Referer` against `websites.domain` (recommended hardening) |
+- Found a bug? [Open an issue](https://github.com/Gokulakrishnxn/crel/issues/new?template=bug_report.md)
+- Have an idea? [Start a discussion](https://github.com/Gokulakrishnxn/crel/discussions)
+- Want to contribute code? Fork → branch → PR
 
 ---
 
 ## License
 
-MIT — fully open source. Use, modify, and self-host without restriction.
+[MIT](LICENSE) — free to use, modify, and self-host.
