@@ -95,7 +95,7 @@ export default function SignupPage() {
       <Card className={authCardClass}>
         <CardHeader className="text-center">
           <div className="mx-auto mb-3 flex items-center justify-center gap-2 text-[17px] font-semibold tracking-[-0.02em]">
-            <CrelLogo height={32} className="max-w-[9rem]" />
+            <CrelLogo height={26} className="max-w-[7.5rem]" />
           </div>
           <CardTitle className="text-[24px] font-semibold tracking-[-0.02em]">
             Create account

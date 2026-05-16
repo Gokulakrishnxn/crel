@@ -27,7 +27,7 @@ export default function LandingPage() {
       <header className="apple-glass sticky top-0 z-50 border-b border-border/60">
         <div className="mx-auto flex w-full max-w-[980px] items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center" aria-label="Crel home">
-            <CrelLogo height={28} priority className="max-w-[8.5rem]" />
+            <CrelLogo height={24} priority className="max-w-[7.25rem]" />
           </Link>
           <nav className="flex items-center gap-1 sm:gap-2">
             <Link href="/login">

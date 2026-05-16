@@ -59,7 +59,7 @@ export function AppSidebar({
           className="flex min-w-0 items-center py-0.5"
           aria-label="Crel home"
         >
-          <CrelLogo height={26} className="max-w-[min(100%,7.5rem)]" />
+          <CrelLogo height={22} className="max-w-[min(100%,6.5rem)]" />
         </Link>
       </SidebarHeader>
 

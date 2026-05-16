@@ -6,7 +6,7 @@ const ASPECT = 330 / 127;
 
 export function CrelLogo({
   className,
-  height = 28,
+  height = 22,
   priority,
 }: {
   className?: string;

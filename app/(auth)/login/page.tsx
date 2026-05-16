@@ -63,7 +63,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-[400px] rounded-2xl border-border/60 bg-card/90 shadow-lg backdrop-blur-xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex justify-center">
-            <CrelLogo height={32} className="max-w-[9rem]" />
+            <CrelLogo height={26} className="max-w-[7.5rem]" />
           </div>
           <CardTitle className="text-[24px] font-semibold tracking-[-0.02em]">Welcome back</CardTitle>
           <CardDescription className="text-[15px]">Sign in to your analytics dashboard</CardDescription>

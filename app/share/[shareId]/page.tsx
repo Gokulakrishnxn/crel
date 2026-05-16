@@ -64,7 +64,7 @@ export default async function SharePage({
       <header className="apple-glass sticky top-0 z-50 border-b border-border/60">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center" aria-label="Crel home">
-            <CrelLogo height={28} className="max-w-[8.5rem]" />
+            <CrelLogo height={24} className="max-w-[7.25rem]" />
           </Link>
           <div className="text-right">
             <p className="text-[15px] font-semibold">{website.name}</p>
