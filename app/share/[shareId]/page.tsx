@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BarChart3 } from "lucide-react";
+import { CrelLogo } from "@/components/brand/crel-logo";
 import { createClient } from "@/lib/supabase/server";
 import {
   getOverviewStats,
@@ -62,10 +63,9 @@ export default async function SharePage({
     <div className="apple-hero-gradient min-h-screen">
       <header className="apple-glass sticky top-0 z-50 border-b border-border/60">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2 text-[17px] font-semibold tracking-tight">
-            <BarChart3 className="h-[22px] w-[22px] text-primary" strokeWidth={2} />
-            Crel
-          </div>
+          <Link href="/" className="flex items-center" aria-label="Crel home">
+            <CrelLogo height={28} className="max-w-[8.5rem]" />
+          </Link>
           <div className="text-right">
             <p className="text-[15px] font-semibold">{website.name}</p>
             <p className="text-[12px] text-muted-foreground">{website.domain}</p>

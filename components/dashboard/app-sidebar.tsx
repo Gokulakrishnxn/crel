@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
   Globe,
   LayoutDashboard,
   Plus,
   User,
 } from "lucide-react";
+import { CrelLogo } from "@/components/brand/crel-logo";
 import { SidebarLineNav } from "@/components/dashboard/sidebar-line-nav";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import {
@@ -56,10 +56,10 @@ export function AppSidebar({
       <SidebarHeader className="dashboard-topbar flex h-14 shrink-0 flex-row items-center border-b border-border/60 px-4 py-0">
         <Link
           href="/dashboard"
-          className="flex min-w-0 items-center gap-2.5 text-[15px] font-semibold tracking-[-0.02em]"
+          className="flex min-w-0 items-center py-0.5"
+          aria-label="Crel home"
         >
-          <BarChart3 className="h-5 w-5 shrink-0 text-primary" strokeWidth={2} />
-          <span className="truncate">Crel</span>
+          <CrelLogo height={26} className="max-w-[min(100%,7.5rem)]" />
         </Link>
       </SidebarHeader>
 

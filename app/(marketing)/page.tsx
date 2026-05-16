@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BarChart3, Shield, Zap } from "lucide-react";
+import { CrelLogo } from "@/components/brand/crel-logo";
 import { Button } from "@/components/ui/button";
 
 const features = [
@@ -25,9 +26,8 @@ export default function LandingPage() {
     <div className="apple-hero-gradient flex min-h-full flex-col">
       <header className="apple-glass sticky top-0 z-50 border-b border-border/60">
         <div className="mx-auto flex w-full max-w-[980px] items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2 text-[17px] font-semibold tracking-tight">
-            <BarChart3 className="h-[22px] w-[22px] text-primary" strokeWidth={2} />
-            Crel
+          <Link href="/" className="flex items-center" aria-label="Crel home">
+            <CrelLogo height={28} priority className="max-w-[8.5rem]" />
           </Link>
           <nav className="flex items-center gap-1 sm:gap-2">
             <Link href="/login">

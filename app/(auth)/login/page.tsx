@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { BarChart3 } from "lucide-react";
+import { CrelLogo } from "@/components/brand/crel-logo";
 import { EmailConfirmationBanner } from "@/components/auth/email-confirmation-banner";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -62,9 +62,8 @@ export default function LoginPage() {
     <div className="apple-hero-gradient flex min-h-full items-center justify-center p-6">
       <Card className="w-full max-w-[400px] rounded-2xl border-border/60 bg-card/90 shadow-lg backdrop-blur-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex items-center justify-center gap-2 text-[17px] font-semibold tracking-[-0.02em]">
-            <BarChart3 className="h-[22px] w-[22px] text-primary" strokeWidth={2} />
-            Crel
+          <div className="mx-auto mb-4 flex justify-center">
+            <CrelLogo height={32} className="max-w-[9rem]" />
           </div>
           <CardTitle className="text-[24px] font-semibold tracking-[-0.02em]">Welcome back</CardTitle>
           <CardDescription className="text-[15px]">Sign in to your analytics dashboard</CardDescription>

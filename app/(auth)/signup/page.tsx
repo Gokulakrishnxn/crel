@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { BarChart3 } from "lucide-react";
+import { CrelLogo } from "@/components/brand/crel-logo";
 import { EmailConfirmationBanner } from "@/components/auth/email-confirmation-banner";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -95,8 +95,7 @@ export default function SignupPage() {
       <Card className={authCardClass}>
         <CardHeader className="text-center">
           <div className="mx-auto mb-3 flex items-center justify-center gap-2 text-[17px] font-semibold tracking-[-0.02em]">
-            <BarChart3 className="h-[22px] w-[22px] text-primary" strokeWidth={2} />
-            Crel
+            <CrelLogo height={32} className="max-w-[9rem]" />
           </div>
           <CardTitle className="text-[24px] font-semibold tracking-[-0.02em]">
             Create account
